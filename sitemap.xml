@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>https://hayatulislamic.edu.tz/</loc>
+    <lastmod>2024-11-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://hayatulislamic.edu.tz/LOGO/hayatul-logo.png</image:loc>
+      <image:title>Hayatul Islamic Secondary School Logo</image:title>
+      <image:caption>Official logo of Hayatul Islamic Secondary School, Tanzania</image:caption>
+    </image:image>
+  </url>
+  
+  <!-- About Section -->
+  <url>
+    <loc>https://hayatulislamic.edu.tz/#about</loc>
+    <lastmod>2024-11-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Academic Programs -->
+  <url>
+    <loc>https://hayatulislamic.edu.tz/#academics</loc>
+    <lastmod>2024-11-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Student Life -->
+  <url>
+    <loc>https://hayatulislamic.edu.tz/#student-life</loc>
+    <lastmod>2024-11-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- School Features -->
+  <url>
+    <loc>https://hayatulislamic.edu.tz/#features</loc>
+    <lastmod>2024-11-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Performance & NECTA Results -->
+  <url>
+    <loc>https://hayatulislamic.edu.tz/#performance</loc>
+    <lastmod>2024-11-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Contact Information -->
+  <url>
+    <loc>https://hayatulislamic.edu.tz/#contact</loc>
+    <lastmod>2024-11-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Admin Login -->
+  <url>
+    <loc>https://hayatulislamic.edu.tz/login.html</loc>
+    <lastmod>2024-11-13</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+</urlset>

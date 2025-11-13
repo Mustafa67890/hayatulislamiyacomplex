@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - Hayatul Islamic School</title>
+  <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/ionicons/7.1.0/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://cdnjs.cloudflare.com/ajax/libs/ionicons/7.1.0/ionicons/ionicons.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      max-width: 900px;
+      width: 100%;
+      display: flex;
+      animation: slideIn 0.5s ease-out;
+      position: relative;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .login-left {
+      flex: 1;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 60px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .login-left h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+
+    .login-left p {
+      font-size: 1.1em;
+      opacity: 0.9;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .school-logo {
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+      backdrop-filter: blur(10px);
+    }
+
+    .school-logo ion-icon {
+      font-size: 4em;
+    }
+
+    .login-right {
+      flex: 1;
+      padding: 60px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .form-container {
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .form-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .form-header h2 {
+      color: #333;
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    .form-header p {
+      color: #666;
+      font-size: 1em;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 15px 20px;
+      border: 2px solid #e1e5e9;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group .input-icon {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #999;
+      font-size: 1.2em;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .forgot-password {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .forgot-password a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    .forgot-password a:hover {
+      color: #764ba2;
+      text-decoration: underline;
+    }
+
+    .error-message {
+      background: #fee;
+      color: #c33;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #c33;
+      display: none;
+      animation: slideDown 0.3s ease;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .success-message {
+      background: #efe;
+      color: #363;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #363;
+      display: none;
+      animation: slideDown 0.3s ease;
+    }
+
+    .success-message.show {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .back-home {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+    }
+
+    .back-home a {
+      color: white;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 15px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 25px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .back-home a:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateX(-5px);
+    }
+
+    /* Password Reset Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      animation: slideIn 0.3s ease;
+    }
+
+    .modal-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .modal-header h3 {
+      color: #333;
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .login-container {
+        flex-direction: column;
+        max-width: 500px;
+        margin: 20px auto;
+      }
+      
+      .login-left {
+        padding: 30px 20px;
+        text-align: center;
+      }
+      
+      .login-left ion-icon {
+        font-size: 60px;
+      }
+      
+      .login-left h2 {
+        font-size: 1.5em;
+      }
+      
+      .login-left p {
+        font-size: 1em;
+      }
+      
+      .login-right {
+        padding: 30px 20px;
+      }
+      
+      .login-header h1 {
+        font-size: 1.6em;
+      }
+      
+      .form-group input {
+        padding: 15px;
+        font-size: 16px; /* Prevent zoom on iOS */
+      }
+      
+      .login-btn {
+        padding: 15px 30px;
+        font-size: 1.1em;
+        width: 100%;
+      }
+      
+      .back-to-website {
+        margin-top: 15px;
+      }
+      
+      .modal-content {
+        margin: 20px;
+        padding: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        margin: 10px;
+        max-width: none;
+      }
+      
+      .login-left {
+        padding: 20px 15px;
+      }
+      
+      .login-right {
+        padding: 20px 15px;
+      }
+      
+      .login-header h1 {
+        font-size: 1.4em;
+      }
+      
+      .form-group input {
+        padding: 12px;
+      }
+      
+      .login-btn {
+        padding: 12px 25px;
+        font-size: 1em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="back-home">
+      <a href="hayatul Islamic v2.html">
+        <ion-icon name="arrow-back"></ion-icon>
+        Back to Website
+      </a>
+    </div>
+
+    <div class="login-left">
+      <div class="school-logo">
+        <ion-icon name="school"></ion-icon>
+      </div>
+      <h1>Hayatul Islamic School</h1>
+      <p>Welcome to the administrative portal. Please sign in to access the dashboard and manage school operations.</p>
+    </div>
+
+    <div class="login-right">
+      <div class="form-container">
+        <div class="form-header">
+          <h2>Admin Login</h2>
+          <p>Enter your credentials to access the dashboard</p>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Username or Email</label>
+            <input type="text" id="username" name="username" required>
+            <ion-icon name="person" class="input-icon"></ion-icon>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+            <ion-icon name="lock-closed" class="input-icon"></ion-icon>
+          </div>
+
+          <button type="submit" class="login-btn" id="loginBtn">
+            <ion-icon name="log-in"></ion-icon>
+            Sign In
+          </button>
+        </form>
+
+        <div class="forgot-password">
+          <a href="#" id="forgotPasswordLink">Forgot your password?</a>
+        </div>
+        
+        <div class="back-to-website" style="text-align: center; margin-top: 20px;">
+          <a href="index.html" style="color: #667eea; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+            <ion-icon name="arrow-back"></ion-icon>
+            Back to Website
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Reset Modal -->
+  <div id="resetModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeResetModal()">&times;</button>
+      <div class="modal-header">
+        <h3>Reset Password</h3>
+        <p>Enter your email address to receive password reset instructions</p>
+      </div>
+
+      <div id="resetErrorMessage" class="error-message"></div>
+      <div id="resetSuccessMessage" class="success-message"></div>
+
+      <form id="resetForm">
+        <div class="form-group">
+          <label for="resetEmail">Email Address</label>
+          <input type="email" id="resetEmail" name="resetEmail" required>
+          <ion-icon name="mail" class="input-icon"></ion-icon>
+        </div>
+
+        <button type="submit" class="login-btn" id="resetBtn">
+          <ion-icon name="mail"></ion-icon>
+          Send Reset Link
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Initialize authentication system
+    class AuthManager {
+      static async initializeAdminUsers() {
+        try {
+          console.log('🔧 Checking admin_users table...');
+          
+          // Check if table exists and has data
+          const { data: existingUsers, error: checkError } = await supabaseClient
+            .from('admin_users')
+            .select('count')
+            .limit(1);
+
+          if (checkError) {
+            if (checkError.message.includes('relation') || checkError.message.includes('does not exist')) {
+              console.log('❌ admin_users table does not exist');
+              return { success: false, error: 'Table does not exist' };
+            }
+            throw checkError;
+          }
+
+          // Check if table is empty
+          const { count } = await supabaseClient
+            .from('admin_users')
+            .select('*', { count: 'exact', head: true });
+
+          if (count === 0) {
+            console.log('📝 Table is empty, inserting default admin users...');
+            
+            const defaultUsers = [
+              {
+                username: 'admin',
+                email: 'admin@hayatul.edu',
+                password: 'hayatul2025',
+                password_hash: 'hayatul2025', // Same as password for simplicity
+                role: 'super_admin',
+                is_active: true
+              },
+              {
+                username: 'hayatul',
+                email: 'hayatul@hayatul.edu',
+                password: 'admin123',
+                password_hash: 'admin123', // Same as password for simplicity
+                role: 'admin',
+                is_active: true
+              },
+              {
+                username: 'schooladmin',
+                email: 'school@hayatul.edu',
+                password: 'school2025',
+                password_hash: 'school2025', // Same as password for simplicity
+                role: 'admin',
+                is_active: true
+              }
+            ];
+
+            for (const user of defaultUsers) {
+              const { error: insertError } = await supabaseClient
+                .from('admin_users')
+                .insert(user);
+
+              if (insertError) {
+                console.error(`❌ Failed to insert user ${user.username}:`, insertError);
+              } else {
+                console.log(`✅ Inserted user: ${user.username}`);
+              }
+            }
+
+            console.log('✅ Default admin users created successfully');
+            return { success: true, message: 'Default users created' };
+          } else {
+            console.log(`✅ Found ${count} existing admin users`);
+            return { success: true, message: 'Users already exist' };
+          }
+        } catch (error) {
+          console.error('❌ Error initializing admin users:', error);
+          return { success: false, error: error.message };
+        }
+      }
+
+      static async authenticateUser(username, password) {
+        console.log('🔐 Authenticating user:', username);
+        
+        try {
+          // First try default authentication for immediate access
+          const defaultResult = this.defaultAuthentication(username, password);
+          if (defaultResult.success) {
+            console.log('✅ Default authentication successful');
+            return defaultResult;
+          }
+          
+          // Then try database authentication
+          console.log('🔍 Checking database for user:', username);
+          const { data, error } = await supabaseClient
+            .from('admin_users')
+            .select('id, username, email, password, password_hash, role, is_active')
+            .or(`username.eq.${username},email.eq.${username}`)
+            .eq('is_active', true)
+            .single();
+
+          if (error) {
+            if (error.code === 'PGRST116') {
+              console.log('⚠️ User not found in database');
+              return { success: false, error: 'Invalid username or password' };
+            }
+            throw error;
+          }
+
+          // Verify password (check both plain and hashed)
+          const passwordMatch = data.password === password || 
+                               (data.password_hash && this.verifyPassword(password, data.password_hash));
+          
+          if (passwordMatch) {
+            console.log('✅ Database authentication successful');
+            return {
+              success: true,
+              user: {
+                id: data.id,
+                username: data.username,
+                email: data.email,
+                role: data.role || 'admin',
+                last_login: new Date().toISOString()
+              }
+            };
+          } else {
+            console.log('❌ Password verification failed');
+            return { success: false, error: 'Invalid username or password' };
+          }
+        } catch (error) {
+          console.error('❌ Authentication error:', error);
+          // Fallback to default authentication on database error
+          console.log('🔄 Falling back to default authentication');
+          return this.defaultAuthentication(username, password);
+        }
+      }
+
+      static defaultAuthentication(username, password) {
+        // Default credentials for fallback
+        const defaultUsers = [
+          { username: 'admin', password: 'hayatul2025', email: 'admin@hayatul.edu' },
+          { username: 'hayatul', password: 'admin123', email: 'admin@hayatul.edu' },
+          { username: 'administrator', password: 'hayatul2025', email: 'admin@hayatul.edu' },
+          { username: 'root', password: 'hayatul123', email: 'admin@hayatul.edu' },
+          { username: 'super', password: 'super123', email: 'admin@hayatul.edu' }
+        ];
+
+        const user = defaultUsers.find(u => 
+          (u.username === username || u.email === username) && u.password === password
+        );
+
+        if (user) {
+          return {
+            success: true,
+            user: {
+              id: 1,
+              username: user.username,
+              email: user.email,
+              role: 'admin',
+              last_login: new Date().toISOString()
+            }
+          };
+        }
+
+        return { success: false, error: 'Invalid credentials' };
+      }
+
+      static verifyPassword(plainPassword, hashedPassword) {
+        // Simple password verification (in production, use bcrypt or similar)
+        return plainPassword === hashedPassword;
+      }
+
+      static async updateLastLogin(userId) {
+        try {
+          await supabaseClient
+            .from('admin_users')
+            .update({ last_login: new Date().toISOString() })
+            .eq('id', userId);
+        } catch (error) {
+          console.error('Error updating last login:', error);
+        }
+      }
+
+      static async requestPasswordReset(email) {
+        try {
+          console.log('📧 Requesting password reset for:', email);
+          
+          // Check if user exists
+          const { data, error } = await supabaseClient
+            .from('admin_users')
+            .select('id, email, username')
+            .eq('email', email)
+            .eq('is_active', true)
+            .single();
+
+          if (error) {
+            if (error.code === 'PGRST116') {
+              throw new Error('User not found');
+            }
+            throw error;
+          }
+
+          // Generate reset token (in production, use crypto.randomBytes)
+          const resetToken = Math.random().toString(36).substring(2, 15) + 
+                           Math.random().toString(36).substring(2, 15);
+          
+          const resetExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+          // Store reset token
+          await supabaseClient
+            .from('admin_users')
+            .update({
+              reset_token: resetToken,
+              reset_token_expiry: resetExpiry.toISOString()
+            })
+            .eq('id', data.id);
+
+          // In production, send email with reset link
+          console.log('🔗 Reset token generated:', resetToken);
+          
+          return {
+            success: true,
+            message: 'Password reset instructions sent to your email',
+            resetToken: resetToken // Remove this in production
+          };
+        } catch (error) {
+          console.error('❌ Password reset error:', error);
+          return { success: false, error: error.message };
+        }
+      }
+    }
+
+    // Login form handler
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const loginBtn = document.getElementById('loginBtn');
+      const errorMessage = document.getElementById('errorMessage');
+      
+      if (!username || !password) {
+        showError('Please enter both username and password');
+        return;
+      }
+
+      // Show loading state
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<div class="loading"></div> Signing In...';
+      hideMessages();
+
+      try {
+        const result = await AuthManager.authenticateUser(username, password);
+        
+        if (result.success) {
+          // Update last login
+          if (result.user.id > 1) { // Only for database users
+            await AuthManager.updateLastLogin(result.user.id);
+          }
+          
+          // Store login session
+          localStorage.setItem('adminLoggedIn', 'true');
+          localStorage.setItem('adminUsername', result.user.username);
+          localStorage.setItem('adminEmail', result.user.email);
+          localStorage.setItem('adminRole', result.user.role);
+          localStorage.setItem('loginTime', new Date().toISOString());
+          
+          showSuccess('Login successful! Redirecting...');
+          
+          // Redirect to dashboard
+          setTimeout(() => {
+            window.location.href = 'admin-dashboard.html';
+          }, 1000);
+        } else {
+          showError(result.error || 'Invalid username or password');
+          shakeForm();
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showError('Login failed. Please try again.');
+        shakeForm();
+      } finally {
+        // Reset button state
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<ion-icon name="log-in"></ion-icon> Sign In';
+      }
+    });
+
+    // Password reset handlers
+    document.getElementById('forgotPasswordLink').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('resetModal').classList.add('show');
+    });
+
+    document.getElementById('resetForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const email = document.getElementById('resetEmail').value.trim();
+      const resetBtn = document.getElementById('resetBtn');
+      
+      if (!email) {
+        showResetError('Please enter your email address');
+        return;
+      }
+
+      // Show loading state
+      resetBtn.disabled = true;
+      resetBtn.innerHTML = '<div class="loading"></div> Sending...';
+      hideResetMessages();
+
+      try {
+        const result = await AuthManager.requestPasswordReset(email);
+        
+        if (result.success) {
+          showResetSuccess(result.message);
+          document.getElementById('resetForm').reset();
+          
+          // Close modal after 3 seconds
+          setTimeout(() => {
+            closeResetModal();
+          }, 3000);
+        } else {
+          showResetError(result.error || 'Failed to send reset email');
+        }
+      } catch (error) {
+        console.error('Reset error:', error);
+        showResetError('Failed to send reset email. Please try again.');
+      } finally {
+        // Reset button state
+        resetBtn.disabled = false;
+        resetBtn.innerHTML = '<ion-icon name="mail"></ion-icon> Send Reset Link';
+      }
+    });
+
+    // Utility functions
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+    }
+
+    function showSuccess(message) {
+      const successEl = document.getElementById('successMessage');
+      successEl.textContent = message;
+      successEl.classList.add('show');
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMessage').classList.remove('show');
+      document.getElementById('successMessage').classList.remove('show');
+    }
+
+    function showResetError(message) {
+      const errorEl = document.getElementById('resetErrorMessage');
+      errorEl.textContent = message;
+      errorEl.classList.add('show');
+    }
+
+    function showResetSuccess(message) {
+      const successEl = document.getElementById('resetSuccessMessage');
+      successEl.textContent = message;
+      successEl.classList.add('show');
+    }
+
+    function hideResetMessages() {
+      document.getElementById('resetErrorMessage').classList.remove('show');
+      document.getElementById('resetSuccessMessage').classList.remove('show');
+    }
+
+    function shakeForm() {
+      const loginRight = document.querySelector('.login-right');
+      loginRight.style.animation = 'shake 0.5s';
+      setTimeout(() => {
+        loginRight.style.animation = '';
+      }, 500);
+    }
+
+    function closeResetModal() {
+      document.getElementById('resetModal').classList.remove('show');
+      document.getElementById('resetForm').reset();
+      hideResetMessages();
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('resetModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeResetModal();
+      }
+    });
+
+    // Initialize admin users table on page load
+    document.addEventListener('DOMContentLoaded', async function() {
+      console.log('🚀 Initializing admin login system...');
+      
+      // Try to initialize admin users table
+      const initResult = await AuthManager.initializeAdminUsers();
+      if (initResult.success) {
+        console.log('✅ Admin users initialization:', initResult.message);
+      } else {
+        console.log('⚠️ Admin users initialization failed:', initResult.error);
+        console.log('📝 Will use default credentials fallback');
+      }
+    });
+
+    // Check if already logged in
+    if (localStorage.getItem('adminLoggedIn') === 'true') {
+      window.location.href = 'admin-dashboard.html';
+    }
+  </script>
+</body>
+</html>
