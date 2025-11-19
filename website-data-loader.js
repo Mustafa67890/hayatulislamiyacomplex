@@ -83,49 +83,7 @@ class WebsiteDataLoader {
   }
 
   // Load and display programs
-  static async loadPrograms() {
-    try {
-      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getPrograms) {
-        console.warn('DatabaseManager not available for loading programs');
-        return;
-      }
-
-      const result = await DatabaseManager.getPrograms();
-      
-      if (result.success && result.data.length > 0) {
-        const programsContainer = document.querySelector('.programs-grid') || document.querySelector('#programs-section');
-        
-        if (programsContainer) {
-          programsContainer.innerHTML = '';
-          
-          result.data.forEach(program => {
-            const programCard = this.createSafeElement('div', 'program-card');
-            const safeLevel = this.escapeHtml(program.level);
-            const safeDescription = this.escapeHtml(program.description);
-            const safeSubjects = this.escapeHtml(program.subjects);
-            const safeDuration = this.escapeHtml(program.duration || 'N/A');
-            
-            programCard.innerHTML = `
-              <div class="program-content">
-                <h3><ion-icon name="school"></ion-icon> ${safeLevel.toUpperCase()}</h3>
-                <p>${safeDescription}</p>
-                <p><strong>Subjects:</strong> ${safeSubjects}</p>
-                <p><strong>Duration:</strong> ${safeDuration}</p>
-              </div>
-            `;
-            programsContainer.appendChild(programCard);
-          });
-          
-          console.log('Programs loaded from database successfully');
-        }
-      } else {
-        console.log('No programs in database, keeping existing content');
-      }
-    } catch (error) {
-      console.error('Error loading programs:', error);
-    }
-  }
-
+  
   // Load and display testimonials
   static async loadTestimonials() {
     try {
