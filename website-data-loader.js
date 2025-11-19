@@ -3,9 +3,36 @@
 
 class WebsiteDataLoader {
   
+  // Track intervals for cleanup
+  static intervals = [];
+  
+  // Safe HTML escape function
+  static escapeHtml(unsafe) {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Safe element creation with textContent
+  static createSafeElement(tag, className, html) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (html) element.innerHTML = html; // Only use for trusted HTML structures
+    return element;
+  }
+
   // Load and display news on website
   static async loadNews() {
     try {
+      // Check if DatabaseManager exists
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getNews) {
+        console.warn('DatabaseManager not available for loading news');
+        return;
+      }
+
       const result = await DatabaseManager.getNews(3);
       
       if (result.success && result.data.length > 0) {
@@ -17,17 +44,25 @@ class WebsiteDataLoader {
           result.data.forEach((news, index) => {
             const newsCard = document.createElement('div');
             newsCard.className = 'news-card';
+            
             const shortContent = news.content.substring(0, 150);
             const isLong = news.content.length > 150;
+            const safeTitle = this.escapeHtml(news.title);
+            const safeContent = this.escapeHtml(news.content);
+            const safeShortContent = this.escapeHtml(shortContent);
+            const safeImageUrl = news.featured_image_url ? this.escapeHtml(news.featured_image_url) : '';
+            const date = new Date(news.date || news.created_at);
+            const formattedDate = date instanceof Date && !isNaN(date) ? date.toLocaleDateString() : 'Date not available';
             
+            // Use template literals but with escaped content
             newsCard.innerHTML = `
-              ${news.featured_image_url ? `<img src="${news.featured_image_url}" alt="${news.title}" class="news-img" loading="lazy">` : '<img src="https://images.unsplash.com/photo-1588072432836-e10032774350?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="News" class="news-img" loading="lazy">'}
+              ${safeImageUrl ? `<img src="${safeImageUrl}" alt="${safeTitle}" class="news-img" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1588072432836-e10032774350?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60'">` : '<img src="https://images.unsplash.com/photo-1588072432836-e10032774350?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="News" class="news-img" loading="lazy">'}
               <div class="news-content">
-                <div class="news-date">${new Date(news.date || news.created_at).toLocaleDateString()}</div>
-                <h3 class="news-title">${news.title}</h3>
+                <div class="news-date">${formattedDate}</div>
+                <h3 class="news-title">${safeTitle}</h3>
                 <div class="news-text">
-                  <p class="news-excerpt" id="excerpt-${index}">${shortContent}${isLong ? '...' : ''}</p>
-                  ${isLong ? `<p class="news-full" id="full-${index}" style="display: none;">${news.content}</p>` : ''}
+                  <p class="news-excerpt" id="excerpt-${index}">${safeShortContent}${isLong ? '...' : ''}</p>
+                  ${isLong ? `<p class="news-full" id="full-${index}" style="display: none;">${safeContent}</p>` : ''}
                 </div>
                 ${isLong ? `
                   <button class="read-more-btn" onclick="toggleReadMore(${index})" id="btn-${index}">
@@ -50,6 +85,11 @@ class WebsiteDataLoader {
   // Load and display programs
   static async loadPrograms() {
     try {
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getPrograms) {
+        console.warn('DatabaseManager not available for loading programs');
+        return;
+      }
+
       const result = await DatabaseManager.getPrograms();
       
       if (result.success && result.data.length > 0) {
@@ -59,14 +99,18 @@ class WebsiteDataLoader {
           programsContainer.innerHTML = '';
           
           result.data.forEach(program => {
-            const programCard = document.createElement('div');
-            programCard.className = 'program-card';
+            const programCard = this.createSafeElement('div', 'program-card');
+            const safeLevel = this.escapeHtml(program.level);
+            const safeDescription = this.escapeHtml(program.description);
+            const safeSubjects = this.escapeHtml(program.subjects);
+            const safeDuration = this.escapeHtml(program.duration || 'N/A');
+            
             programCard.innerHTML = `
               <div class="program-content">
-                <h3><ion-icon name="school"></ion-icon> ${program.level.toUpperCase()}</h3>
-                <p>${program.description}</p>
-                <p><strong>Subjects:</strong> ${program.subjects}</p>
-                <p><strong>Duration:</strong> ${program.duration || 'N/A'}</p>
+                <h3><ion-icon name="school"></ion-icon> ${safeLevel.toUpperCase()}</h3>
+                <p>${safeDescription}</p>
+                <p><strong>Subjects:</strong> ${safeSubjects}</p>
+                <p><strong>Duration:</strong> ${safeDuration}</p>
               </div>
             `;
             programsContainer.appendChild(programCard);
@@ -85,6 +129,11 @@ class WebsiteDataLoader {
   // Load and display testimonials
   static async loadTestimonials() {
     try {
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getTestimonials) {
+        console.warn('DatabaseManager not available for loading testimonials');
+        return;
+      }
+
       const result = await DatabaseManager.getTestimonials();
       
       if (result.success && result.data.length > 0) {
@@ -92,24 +141,33 @@ class WebsiteDataLoader {
         const testimonialsNav = document.querySelector('.testimonial-nav');
         
         if (testimonialsSlides && testimonialsNav) {
-          testimonialsSlides.innerHTML = result.data.map(testimonial => `
-            <div class="testimonial-slide">
+          // Clear existing content safely
+          testimonialsSlides.innerHTML = '';
+          testimonialsNav.innerHTML = '';
+          
+          result.data.forEach((testimonial, index) => {
+            const slide = this.createSafeElement('div', 'testimonial-slide');
+            const safeName = this.escapeHtml(testimonial.name);
+            const safeRole = this.escapeHtml(testimonial.role);
+            const safeText = this.escapeHtml(testimonial.testimonial_text);
+            const safePhotoUrl = testimonial.photo_url ? this.escapeHtml(testimonial.photo_url) : '';
+            
+            slide.innerHTML = `
               <div class="testimonial-content">
-                <img src="${testimonial.photo_url || 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60'}" alt="${testimonial.name}" class="testimonial-img" loading="lazy">
-                <div class="testimonial-name">${testimonial.name}</div>
-                <div class="testimonial-role">${testimonial.role}</div>
-                <p class="testimonial-text">"${testimonial.testimonial_text}"</p>
+                <img src="${safePhotoUrl || 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60'}" alt="${safeName}" class="testimonial-img" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60'">
+                <div class="testimonial-name">${safeName}</div>
+                <div class="testimonial-role">${safeRole}</div>
+                <p class="testimonial-text">"${safeText}"</p>
               </div>
-            </div>
-          `).join('');
+            `;
+            testimonialsSlides.appendChild(slide);
+            
+            const dot = this.createSafeElement('div', `testimonial-dot ${index === 0 ? 'active' : ''}`);
+            dot.dataset.slide = index.toString();
+            testimonialsNav.appendChild(dot);
+          });
           
-          testimonialsNav.innerHTML = result.data.map((_, index) => 
-            `<div class="testimonial-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></div>`
-          ).join('');
-          
-          testimonialsSlides.style.transform = 'translateX(0%)';
           this.initializeTestimonialSlider();
-          
           console.log('Testimonials loaded from database successfully');
         }
       }
@@ -125,39 +183,50 @@ class WebsiteDataLoader {
     
     if (!testimonialsSlides || !testimonialsNav) return;
     
-    let currentTestimonial = 0;
-    let testimonialInterval;
+    // Clear any existing interval
+    if (this.testimonialInterval) {
+      clearInterval(this.testimonialInterval);
+    }
     
+    let currentTestimonial = 0;
     const totalTestimonials = testimonialsSlides.children.length;
     
-    function updateTestimonialDots() {
+    if (totalTestimonials === 0) return;
+    
+    const updateTestimonialDots = () => {
       document.querySelectorAll('.testimonial-dot').forEach((dot, index) => {
         dot.classList.toggle('active', index === currentTestimonial);
       });
-    }
+    };
     
-    function goToTestimonial(index) {
+    const goToTestimonial = (index) => {
       currentTestimonial = index;
       testimonialsSlides.style.transform = `translateX(-${currentTestimonial * 100}%)`;
       updateTestimonialDots();
-    }
+    };
     
-    function nextTestimonial() {
+    const nextTestimonial = () => {
       currentTestimonial = (currentTestimonial + 1) % totalTestimonials;
       goToTestimonial(currentTestimonial);
-    }
+    };
     
-    function startTestimonialAutoSlide() {
-      testimonialInterval = setInterval(nextTestimonial, 6000);
-    }
+    const startTestimonialAutoSlide = () => {
+      this.testimonialInterval = setInterval(nextTestimonial, 6000);
+    };
     
-    function stopTestimonialAutoSlide() {
-      clearInterval(testimonialInterval);
-    }
+    const stopTestimonialAutoSlide = () => {
+      clearInterval(this.testimonialInterval);
+    };
     
+    // Initialize first slide
+    goToTestimonial(0);
     startTestimonialAutoSlide();
     
-    testimonialsNav.addEventListener('click', (e) => {
+    // Remove existing event listeners by cloning
+    const newNav = testimonialsNav.cloneNode(true);
+    testimonialsNav.parentNode.replaceChild(newNav, testimonialsNav);
+    
+    newNav.addEventListener('click', (e) => {
       if (e.target.classList.contains('testimonial-dot')) {
         stopTestimonialAutoSlide();
         goToTestimonial(parseInt(e.target.dataset.slide));
@@ -174,6 +243,10 @@ class WebsiteDataLoader {
     try {
       console.log('🖼️ Loading slider images from database...');
       
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getSliderImages) {
+        throw new Error('DatabaseManager not available');
+      }
+
       const result = await DatabaseManager.getSliderImages();
       
       if (result.success && result.data && result.data.length > 0) {
@@ -196,17 +269,17 @@ class WebsiteDataLoader {
   static loadLocalSliderImages() {
     console.log('🖼️ Loading local slider images...');
     
-    window.images = [
-      'IMAGE SLIDER/slider1.jpg',
-      'IMAGE SLIDER/slider2.jpg', 
-      'IMAGE SLIDER/slider3.jpg',
-      'IMAGE SLIDER/slider4.jpg',
-      'IMAGE SLIDER/slider5.jpg',
-      'IMAGE SLIDER/slider6.jpg',
-      'IMAGE SLIDER/slider7.jpg',
-      'IMAGE SLIDER/slider8.jpg',
-      'IMAGE SLIDER/slider9.jpg'
+    // Use more reliable image paths
+    const localImages = [
+      'images/slider1.jpg',
+      'images/slider2.jpg', 
+      'images/slider3.jpg',
+      'images/slider4.jpg',
+      'images/slider5.jpg'
     ];
+    
+    // Fallback to placeholder if local images don't exist
+    window.images = localImages;
     
     this.initializeImageSlider();
     console.log('✅ Local slider images loaded');
@@ -218,11 +291,15 @@ class WebsiteDataLoader {
     
     if (!window.images || window.images.length === 0) {
       console.log('⚠️ No images available for slider');
+      this.setDefaultSliderContent();
       return;
     }
     
+    // Check if slider functions exist before calling
     if (typeof window.initializeSlider === 'function') {
       window.initializeSlider();
+    } else {
+      console.warn('initializeSlider function not found');
     }
     
     if (typeof window.createDots === 'function') {
@@ -235,28 +312,66 @@ class WebsiteDataLoader {
     
     if (typeof window.startSliderAfterLoad === 'function') {
       window.startSliderAfterLoad();
+    } else {
+      // Start slider anyway if function doesn't exist
+      this.startBasicSlider();
     }
     
     console.log(`✅ Image slider initialized with ${window.images.length} images`);
   }
 
+  // Basic slider fallback
+  static startBasicSlider() {
+    if (!window.sliderInterval) {
+      window.sliderInterval = setInterval(() => {
+        if (typeof window.nextSlide === 'function') {
+          window.nextSlide();
+        }
+      }, 5000);
+    }
+  }
+
+  // Set default slider content when no images
+  static setDefaultSliderContent() {
+    const sliderContainer = document.querySelector('.slider-container') || 
+                           document.querySelector('.image-slider');
+    
+    if (sliderContainer) {
+      sliderContainer.innerHTML = `
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 400px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+          <div style="text-align: center;">
+            <ion-icon name="images-outline" style="font-size: 48px; margin-bottom: 20px;"></ion-icon>
+            <p>School Images Coming Soon</p>
+          </div>
+        </div>
+      `;
+    }
+  }
+
   // Load website settings and update header/footer
   static async loadWebsiteSettings() {
     try {
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getSettings) {
+        console.warn('DatabaseManager not available for loading settings');
+        return;
+      }
+
       const result = await DatabaseManager.getSettings();
       
       if (result.success && result.data) {
         const settings = result.data;
         
+        // Update document title safely
         if (settings.school_name && 
             settings.school_name.trim() !== '' && 
             settings.school_name.toLowerCase() !== 'test school' &&
             settings.school_name.toLowerCase() !== 'test school name') {
-          document.title = settings.school_name;
+          document.title = this.escapeHtml(settings.school_name);
         } else {
           document.title = 'Hayatul Islamic School';
         }
         
+        // Update school name elements
         const schoolNameElements = document.querySelectorAll('.school-name, .logo-text, h1');
         schoolNameElements.forEach(el => {
           if (el.textContent.includes('Hayatul') || el.textContent.includes('School')) {
@@ -264,6 +379,7 @@ class WebsiteDataLoader {
           }
         });
         
+        // Update phone elements
         const phoneElements = document.querySelectorAll('a[href*="tel:"], .phone-number');
         phoneElements.forEach(el => {
           if (settings.phone_number) {
@@ -274,6 +390,7 @@ class WebsiteDataLoader {
           }
         });
         
+        // Update email elements
         const emailElements = document.querySelectorAll('a[href*="mailto:"], .email');
         emailElements.forEach(el => {
           if (settings.contact_email) {
@@ -284,6 +401,7 @@ class WebsiteDataLoader {
           }
         });
         
+        // Update WhatsApp links
         const whatsappLinks = document.querySelectorAll('a[href*="wa.me"]');
         whatsappLinks.forEach(link => {
           if (settings.phone_number) {
@@ -304,13 +422,20 @@ class WebsiteDataLoader {
     try {
       console.log('🎓 Loading student life images from database...');
       
-      const imagesResult = await DatabaseManager.getStudentLifeImages();
       const studentLifeGallery = document.querySelector('.student-life-gallery');
       
       if (!studentLifeGallery) {
         console.error('❌ Student life gallery element not found');
         return;
       }
+      
+      // Check DatabaseManager availability
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getStudentLifeImages) {
+        this.showStudentLifeEmptyState(studentLifeGallery);
+        return;
+      }
+
+      const imagesResult = await DatabaseManager.getStudentLifeImages();
       
       if (imagesResult.success && imagesResult.data && imagesResult.data.length > 0) {
         console.log(`🎯 Found ${imagesResult.data.length} student life images in database`);
@@ -330,10 +455,10 @@ class WebsiteDataLoader {
         imagesToShow.forEach((image, index) => {
           const imgElement = document.createElement('img');
           imgElement.src = image.image_url;
-          imgElement.alt = image.title;
+          imgElement.alt = this.escapeHtml(image.title);
           imgElement.className = 'student-life-img';
-          imgElement.title = image.description || image.title;
-          imgElement.loading = 'lazy'; // OPTIMIZED: Lazy loading
+          imgElement.title = this.escapeHtml(image.description || image.title);
+          imgElement.loading = 'lazy';
           imgElement.style.cssText = `
             width: 100%;
             height: 200px;
@@ -343,6 +468,11 @@ class WebsiteDataLoader {
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
           `;
           
+          // Add error handling for images
+          imgElement.addEventListener('error', () => {
+            imgElement.src = 'https://images.unsplash.com/photo-1562813733-b31f71025d54?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60';
+          });
+          
           imgElement.addEventListener('mouseenter', () => {
             imgElement.style.transform = 'scale(1.05)';
             imgElement.style.boxShadow = '0 8px 25px rgba(0,0,0,0.2)';
@@ -350,7 +480,7 @@ class WebsiteDataLoader {
           imgElement.addEventListener('mouseleave', () => {
             imgElement.style.transform = 'scale(1)';
             imgElement.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
-          };
+          });
           
           studentLifeGallery.appendChild(imgElement);
         });
@@ -358,40 +488,65 @@ class WebsiteDataLoader {
         console.log('✅ Student life images loaded from database successfully');
       } else {
         console.log('📝 No student life images found in database, showing empty state');
-        
-        studentLifeGallery.innerHTML = `
-          <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #666;">
-            <ion-icon name="images-outline" style="font-size: 64px; margin-bottom: 20px; opacity: 0.3;"></ion-icon>
-            <h3 style="margin-bottom: 10px; color: #999;">No Student Life Images Yet</h3>
-            <p style="margin-bottom: 20px;">Student life images will appear here once they are added through the admin panel.</p>
-            <small style="opacity: 0.7;">Check back soon for exciting glimpses of our school life!</small>
-          </div>
-        `;
+        this.showStudentLifeEmptyState(studentLifeGallery);
       }
       
-      const activitiesResult = await DatabaseManager.getStudentLifeActivities();
-      
-      if (activitiesResult.success && activitiesResult.data.length > 0) {
-        const activitiesByCategory = {};
-        activitiesResult.data.forEach(activity => {
-          if (!activitiesByCategory[activity.category]) {
-            activitiesByCategory[activity.category] = [];
-          }
-          activitiesByCategory[activity.category].push(activity.activity_name);
-        });
+      // Load activities if DatabaseManager available
+      if (DatabaseManager.getStudentLifeActivities) {
+        const activitiesResult = await DatabaseManager.getStudentLifeActivities();
         
-        Object.keys(activitiesByCategory).forEach(category => {
-          const listElement = document.querySelector(`#${category}-activities`);
-          if (listElement) {
-            listElement.innerHTML = activitiesByCategory[category]
-              .map(activity => `<li>${activity}</li>`)
-              .join('');
-          }
-        });
+        if (activitiesResult.success && activitiesResult.data.length > 0) {
+          const activitiesByCategory = {};
+          activitiesResult.data.forEach(activity => {
+            if (!activitiesByCategory[activity.category]) {
+              activitiesByCategory[activity.category] = [];
+            }
+            activitiesByCategory[activity.category].push(activity.activity_name);
+          });
+          
+          Object.keys(activitiesByCategory).forEach(category => {
+            const listElement = document.querySelector(`#${category}-activities`);
+            if (listElement) {
+              listElement.innerHTML = activitiesByCategory[category]
+                .map(activity => `<li>${this.escapeHtml(activity)}</li>`)
+                .join('');
+            }
+          });
+        }
       }
       
     } catch (error) {
       console.error('❌ Error loading student life:', error);
+      const studentLifeGallery = document.querySelector('.student-life-gallery');
+      if (studentLifeGallery) {
+        this.showStudentLifeEmptyState(studentLifeGallery);
+      }
+    }
+  }
+
+  // Show empty state for student life
+  static showStudentLifeEmptyState(container) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #666;">
+        <ion-icon name="images-outline" style="font-size: 64px; margin-bottom: 20px; opacity: 0.3;"></ion-icon>
+        <h3 style="margin-bottom: 10px; color: #999;">No Student Life Images Yet</h3>
+        <p style="margin-bottom: 20px;">Student life images will appear here once they are added through the admin panel.</p>
+        <small style="opacity: 0.7;">Check back soon for exciting glimpses of our school life!</small>
+      </div>
+    `;
+  }
+
+  // Clear all intervals
+  static clearIntervals() {
+    this.intervals.forEach(interval => clearInterval(interval));
+    this.intervals = [];
+    
+    if (this.testimonialInterval) {
+      clearInterval(this.testimonialInterval);
+    }
+    
+    if (window.sliderInterval) {
+      clearInterval(window.sliderInterval);
     }
   }
 
@@ -399,63 +554,84 @@ class WebsiteDataLoader {
   static async initializeWebsiteData() {
     console.log('Initializing optimized website data loading...');
     
-    // Load all data once
-    await this.loadNews();
-    await this.loadPrograms();
-    await this.loadTestimonials();
-    await this.loadStudentLife();
-    await this.loadSliderImages();
-    await this.loadWebsiteSettings();
+    // Clear any existing intervals first
+    this.clearIntervals();
     
-    // OPTIMIZED: Different refresh rates for admin vs public
-    const isAdminPage = window.location.pathname.includes('admin') || 
-                       window.location.pathname.includes('login') ||
-                       window.location.pathname.includes('dashboard');
-    
-    if (isAdminPage) {
-      console.log('Admin page detected - using frequent updates');
-      // Admin pages: frequent updates
-      setInterval(() => {
-        this.loadNews();
-        this.loadPrograms();
-        this.loadTestimonials();
-        this.loadStudentLife();
-        this.loadSliderImages();
-        this.loadWebsiteSettings();
-      }, 2 * 60 * 1000); // Every 2 minutes for admin
-    } else {
-      console.log('Public page detected - using optimized updates');
-      // Public pages: less frequent updates
-      setInterval(() => {
-        this.loadNews(); // Only news updates frequently
-      }, 10 * 60 * 1000); // Every 10 minutes for public
+    try {
+      // Load all data once
+      await Promise.allSettled([
+        this.loadNews(),
+        this.loadPrograms(),
+        this.loadTestimonials(),
+        this.loadStudentLife(),
+        this.loadSliderImages(),
+        this.loadWebsiteSettings()
+      ]);
       
-      // Other content updates less frequently
-      setInterval(() => {
-        this.loadPrograms();
-        this.loadTestimonials();
-        this.loadWebsiteSettings();
-      }, 30 * 60 * 1000); // Every 30 minutes
+      // OPTIMIZED: Different refresh rates for admin vs public
+      const isAdminPage = window.location.pathname.includes('admin') || 
+                         window.location.pathname.includes('login') ||
+                         window.location.pathname.includes('dashboard');
+      
+      if (isAdminPage) {
+        console.log('Admin page detected - using frequent updates');
+        // Admin pages: frequent updates
+        const adminInterval = setInterval(() => {
+          this.loadNews();
+          this.loadPrograms();
+          this.loadTestimonials();
+          this.loadStudentLife();
+          this.loadSliderImages();
+          this.loadWebsiteSettings();
+        }, 2 * 60 * 1000); // Every 2 minutes for admin
+        this.intervals.push(adminInterval);
+      } else {
+        console.log('Public page detected - using optimized updates');
+        // Public pages: less frequent updates
+        const newsInterval = setInterval(() => {
+          this.loadNews(); // Only news updates frequently
+        }, 10 * 60 * 1000); // Every 10 minutes for public
+        this.intervals.push(newsInterval);
+        
+        // Other content updates less frequently
+        const otherContentInterval = setInterval(() => {
+          this.loadPrograms();
+          this.loadTestimonials();
+          this.loadWebsiteSettings();
+        }, 30 * 60 * 1000); // Every 30 minutes
+        this.intervals.push(otherContentInterval);
+      }
+    } catch (error) {
+      console.error('Error during website data initialization:', error);
     }
   }
 
   // OPTIMIZED: Minimal real-time updates for public
   static setupRealTimeUpdates() {
     try {
+      if (typeof DatabaseManager === 'undefined') {
+        console.log('DatabaseManager not available for real-time updates');
+        return;
+      }
+
       const isAdminPage = window.location.pathname.includes('admin') || 
                          window.location.pathname.includes('login') ||
                          window.location.pathname.includes('dashboard');
       
       if (isAdminPage) {
         // Full real-time for admin
-        DatabaseManager.subscribeToNews((payload) => {
-          console.log('News updated, reloading...');
-          this.loadNews();
-        });
+        if (DatabaseManager.subscribeToNews) {
+          DatabaseManager.subscribeToNews((payload) => {
+            console.log('News updated, reloading...');
+            this.loadNews();
+          });
+        }
 
-        DatabaseManager.subscribeToApplications((payload) => {
-          console.log('Applications updated');
-        });
+        if (DatabaseManager.subscribeToApplications) {
+          DatabaseManager.subscribeToApplications((payload) => {
+            console.log('Applications updated');
+          });
+        }
         
         console.log('Admin real-time updates enabled');
       } else {
@@ -474,14 +650,16 @@ function toggleReadMore(index) {
   const full = document.getElementById(`full-${index}`);
   const btn = document.getElementById(`btn-${index}`);
   
-  if (full.style.display === 'none') {
-    excerpt.style.display = 'none';
-    full.style.display = 'block';
-    btn.textContent = 'Read Less';
-  } else {
-    excerpt.style.display = 'block';
-    full.style.display = 'none';
-    btn.textContent = 'Read More';
+  if (excerpt && full && btn) {
+    if (full.style.display === 'none') {
+      excerpt.style.display = 'none';
+      full.style.display = 'block';
+      btn.textContent = 'Read Less';
+    } else {
+      excerpt.style.display = 'block';
+      full.style.display = 'none';
+      btn.textContent = 'Read More';
+    }
   }
 }
 
@@ -492,15 +670,24 @@ console.log('OPTIMIZED WebsiteDataLoader class loaded successfully');
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Optimized website data loader initializing...');
   
-  setTimeout(() => {
-    if (window.DatabaseManager) {
+  // Reduced timeout for faster loading
+  const initTimeout = setTimeout(() => {
+    if (window.DatabaseManager && typeof DatabaseManager.getNews === 'function') {
       console.log('DatabaseManager found, loading dynamic content...');
       WebsiteDataLoader.initializeWebsiteData();
       WebsiteDataLoader.setupRealTimeUpdates();
     } else {
       console.log('DatabaseManager not available, using static content');
+      // Initialize basic functionality even without DatabaseManager
+      WebsiteDataLoader.loadLocalSliderImages();
     }
-  }, 1500); // Reduced timeout for faster loading
+  }, 1000);
+
+  // Clean up timeout on page unload
+  window.addEventListener('beforeunload', () => {
+    clearTimeout(initTimeout);
+    WebsiteDataLoader.clearIntervals();
+  });
 });
 
 // Export for use in other files
