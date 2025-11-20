@@ -48,76 +48,7 @@ class WebsiteDataLoader {
   }
 
   // Load and display programs
-  static async loadPrograms() {
-    try {
-      const result = await DatabaseManager.getPrograms();
-
-      if (result.success && result.data.length > 0) {
-        const programsContainer = document.querySelector('.programs-grid') || document.querySelector('#programs-section');
-
-        if (programsContainer) {
-          programsContainer.innerHTML = '';
-
-          result.data.forEach(program => {
-            const programCard = document.createElement('div');
-            programCard.className = 'program-card';
-            programCard.innerHTML = `
-              <div class="program-content">
-                <h3><ion-icon name="school"></ion-icon> ${program.level.toUpperCase()}</h3>
-                <p>${program.description}</p>
-                <p><strong>Subjects:</strong> ${program.subjects}</p>
-                <p><strong>Duration:</strong> ${program.duration || 'N/A'}</p>
-              </div>
-            `;
-            programsContainer.appendChild(programCard);
-          });
-
-          console.log('Programs loaded from database successfully');
-        }
-      } else {
-        console.log('No programs in database, keeping existing content');
-      }
-    } catch (error) {
-      console.error('Error loading programs:', error);
-    }
-  }
-
-  // Load and display testimonials
-  static async loadTestimonials() {
-    try {
-      const result = await DatabaseManager.getTestimonials();
-
-      if (result.success && result.data.length > 0) {
-        const testimonialsSlides = document.querySelector('.testimonial-slides');
-        const testimonialsNav = document.querySelector('.testimonial-nav');
-
-        if (testimonialsSlides && testimonialsNav) {
-          testimonialsSlides.innerHTML = result.data.map(testimonial => `
-            <div class="testimonial-slide">
-              <div class="testimonial-content">
-                <img src="${testimonial.photo_url || 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60'}" alt="${testimonial.name}" class="testimonial-img" loading="lazy">
-                <div class="testimonial-name">${testimonial.name}</div>
-                <div class="testimonial-role">${testimonial.role}</div>
-                <p class="testimonial-text">"${testimonial.testimonial_text}"</p>
-              </div>
-            </div>
-          `).join('');
-
-          testimonialsNav.innerHTML = result.data.map((_, index) =>
-            `<div class="testimonial-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></div>`
-          ).join('');
-
-          testimonialsSlides.style.transform = 'translateX(0%)';
-          this.initializeTestimonialSlider();
-
-          console.log('Testimonials loaded from database successfully');
-        }
-      }
-    } catch (error) {
-      console.error('Error loading testimonials:', error);
-    }
-  }
-
+  
   // Initialize testimonial slider functionality
   static initializeTestimonialSlider() {
     const testimonialsSlides = document.querySelector('.testimonial-slides');
@@ -471,6 +402,58 @@ class WebsiteDataLoader {
     }
   }
 
+  // Load leadership team
+  static async loadLeadership() {
+    try {
+      const result = await DatabaseManager.getLeadership();
+
+      if (result.success && result.data.length > 0) {
+        // Create leadership slider with all members
+        const leaderImg = document.getElementById('leader-img');
+        const leaderName = document.getElementById('leader-name');
+        const leaderSlogan = document.getElementById('leader-slogan');
+
+        if (leaderImg && leaderName && leaderSlogan) {
+          // Create slider with all leadership members
+          let leaderIndex = 0;
+          const leaders = result.data.map(member => ({
+            image: member.photo_url || 'https://scontent.fdar3-1.fna.fbcdn.net/v/t39.30808-6/217007174_1989869067832820_554727872759498263_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=h03rnZRy5_IQ7kNvwGKWzEV&_nc_oc=AdmlVJ1BFfIbvZVhlxHVcTK6h0RJIYIr2IN5CH7rUY1GgDKXV96JMIikskoINOFJP-c&_nc_zt=23&_nc_ht=scontent.fdar3-1.fna&_nc_gid=1DjB9qK_GGjtXUUShY7uSw&oh=00_Afhh65-r8qANxWaSI-LIYeZUFqaRWURvhM4VUtlP0RZOeg&oe=6925514E',
+            name: member.name,
+            slogan: member.qualifications || `"${member.position} - Leading with Excellence"`
+          }));
+
+          function updateLeader() {
+            if (leaders.length > 0) {
+              leaderImg.src = leaders[leaderIndex].image;
+              leaderName.textContent = leaders[leaderIndex].name;
+              leaderSlogan.textContent = leaders[leaderIndex].slogan;
+              leaderIndex = (leaderIndex + 1) % leaders.length;
+            }
+          }
+
+          // Initialize slider
+          updateLeader();
+
+          // Clear any existing interval
+          if (window.leadershipInterval) {
+            clearInterval(window.leadershipInterval);
+          }
+
+          // Start new interval
+          window.leadershipInterval = setInterval(updateLeader, 4000);
+        }
+
+        console.log('Leadership loaded from database successfully with slider functionality');
+      } else {
+        // Keep existing leadership slider if no database data
+        console.log('No leadership data in database, keeping existing content');
+      }
+    } catch (error) {
+      console.error('Error loading leadership:', error);
+      // Keep existing content on error
+    }
+  }
+
   // OPTIMIZED: Initialize with smart refresh intervals
   static async initializeWebsiteData() {
     console.log('Initializing optimized website data loading...');
@@ -583,3 +566,4 @@ document.addEventListener('DOMContentLoaded', function () {
 // Export for use in other files
 window.WebsiteDataLoader = WebsiteDataLoader;
 window.toggleReadMore = toggleReadMore;
+
