@@ -529,10 +529,10 @@ class WebsiteDataLoader {
 
     // Load all data once
     await this.loadNews();
-    await this.loadPrograms();
     await this.loadTestimonials();
     await this.loadStudentLife();
     await this.loadNectaResults();
+    await this.loadLeadership();
     await this.loadSliderImages();
     await this.loadWebsiteSettings();
 
@@ -546,9 +546,9 @@ class WebsiteDataLoader {
       // Admin pages: frequent updates
       setInterval(() => {
         this.loadNews();
-        this.loadPrograms();
         this.loadTestimonials();
         this.loadStudentLife();
+        this.loadLeadership();
         this.loadSliderImages();
         this.loadWebsiteSettings();
       }, 2 * 60 * 1000); // Every 2 minutes for admin
@@ -561,8 +561,8 @@ class WebsiteDataLoader {
 
       // Other content updates less frequently
       setInterval(() => {
-        this.loadPrograms();
         this.loadTestimonials();
+        this.loadLeadership();
         this.loadWebsiteSettings();
       }, 30 * 60 * 1000); // Every 30 minutes
     }
