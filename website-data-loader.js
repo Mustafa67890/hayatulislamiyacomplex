@@ -1,5 +1,4 @@
 // OPTIMIZED Website Data Loader - Performance Enhanced Version
-
 // Reduced auto-refresh for public website, local image fallbacks
 
 class WebsiteDataLoader {
@@ -49,7 +48,76 @@ class WebsiteDataLoader {
   }
 
   // Load and display programs
-  
+  static async loadPrograms() {
+    try {
+      const result = await DatabaseManager.getPrograms();
+
+      if (result.success && result.data.length > 0) {
+        const programsContainer = document.querySelector('.programs-grid') || document.querySelector('#programs-section');
+
+        if (programsContainer) {
+          programsContainer.innerHTML = '';
+
+          result.data.forEach(program => {
+            const programCard = document.createElement('div');
+            programCard.className = 'program-card';
+            programCard.innerHTML = `
+              <div class="program-content">
+                <h3><ion-icon name="school"></ion-icon> ${program.level.toUpperCase()}</h3>
+                <p>${program.description}</p>
+                <p><strong>Subjects:</strong> ${program.subjects}</p>
+                <p><strong>Duration:</strong> ${program.duration || 'N/A'}</p>
+              </div>
+            `;
+            programsContainer.appendChild(programCard);
+          });
+
+          console.log('Programs loaded from database successfully');
+        }
+      } else {
+        console.log('No programs in database, keeping existing content');
+      }
+    } catch (error) {
+      console.error('Error loading programs:', error);
+    }
+  }
+
+  // Load and display testimonials
+  static async loadTestimonials() {
+    try {
+      const result = await DatabaseManager.getTestimonials();
+
+      if (result.success && result.data.length > 0) {
+        const testimonialsSlides = document.querySelector('.testimonial-slides');
+        const testimonialsNav = document.querySelector('.testimonial-nav');
+
+        if (testimonialsSlides && testimonialsNav) {
+          testimonialsSlides.innerHTML = result.data.map(testimonial => `
+            <div class="testimonial-slide">
+              <div class="testimonial-content">
+                <img src="${testimonial.photo_url || 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60'}" alt="${testimonial.name}" class="testimonial-img" loading="lazy">
+                <div class="testimonial-name">${testimonial.name}</div>
+                <div class="testimonial-role">${testimonial.role}</div>
+                <p class="testimonial-text">"${testimonial.testimonial_text}"</p>
+              </div>
+            </div>
+          `).join('');
+
+          testimonialsNav.innerHTML = result.data.map((_, index) =>
+            `<div class="testimonial-dot ${index === 0 ? 'active' : ''}" data-slide="${index}"></div>`
+          ).join('');
+
+          testimonialsSlides.style.transform = 'translateX(0%)';
+          this.initializeTestimonialSlider();
+
+          console.log('Testimonials loaded from database successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading testimonials:', error);
+    }
+  }
+
   // Initialize testimonial slider functionality
   static initializeTestimonialSlider() {
     const testimonialsSlides = document.querySelector('.testimonial-slides');
@@ -567,4 +635,3 @@ document.addEventListener('DOMContentLoaded', function () {
 // Export for use in other files
 window.WebsiteDataLoader = WebsiteDataLoader;
 window.toggleReadMore = toggleReadMore;
-
