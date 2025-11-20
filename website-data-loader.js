@@ -1,4 +1,5 @@
 // OPTIMIZED Website Data Loader - Performance Enhanced Version
+
 // Reduced auto-refresh for public website, local image fallbacks
 
 class WebsiteDataLoader {
