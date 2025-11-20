@@ -1,14 +1,15 @@
 // OPTIMIZED Website Data Loader - Performance Enhanced Version
-// Reduced auto-refresh for public website, local image fallbacks
+// ALL images from database (Supabase) - No local storage except academic programs
 
 class WebsiteDataLoader {
   
   // Track intervals for cleanup
   static intervals = [];
   
-  // Safe HTML escape function
+  // Safe HTML escape function - FIXED: Handle non-string values
   static escapeHtml(unsafe) {
-    if (!unsafe) return '';
+    if (unsafe === null || unsafe === undefined) return '';
+    if (typeof unsafe !== 'string') return String(unsafe);
     return unsafe
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -55,7 +56,6 @@ class WebsiteDataLoader {
             const date = new Date(news.date || news.created_at || Date.now());
             const formattedDate = date instanceof Date && !isNaN(date) ? date.toLocaleDateString() : 'Date not available';
             
-            // Use template literals but with escaped content
             newsCard.innerHTML = `
               ${safeImageUrl ? `<img src="${safeImageUrl}" alt="${safeTitle}" class="news-img" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1588072432836-e10032774350?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60'">` : '<img src="https://images.unsplash.com/photo-1588072432836-e10032774350?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="News" class="news-img" loading="lazy">'}
               <div class="news-content">
@@ -85,55 +85,68 @@ class WebsiteDataLoader {
     }
   }
 
-  // Load and display programs
+  // Load and display programs - ONLY THIS USES LOCAL IMAGES
   static async loadPrograms() {
     try {
-      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getPrograms) {
-        console.warn('DatabaseManager not available for loading programs');
+      const programsContainer = document.querySelector('.programs-grid') || document.querySelector('#programs-section');
+      
+      if (!programsContainer) {
+        console.log('Programs container not found');
         return;
       }
 
-      const result = await DatabaseManager.getPrograms();
-      
-      if (result.success && result.data && result.data.length > 0) {
-        const programsContainer = document.querySelector('.programs-grid') || document.querySelector('#programs-section');
-        
-        if (programsContainer) {
-          programsContainer.innerHTML = '';
-          
-          result.data.forEach(program => {
-            const programCard = this.createSafeElement('div', 'program-card');
-            const safeLevel = this.escapeHtml(program.level || '');
-            const safeDescription = this.escapeHtml(program.description || '');
-            const safeSubjects = this.escapeHtml(program.subjects || '');
-            const safeDuration = this.escapeHtml(program.duration || 'N/A');
-            
-            programCard.innerHTML = `
-              <div class="program-content">
-                <h3><ion-icon name="school"></ion-icon> ${safeLevel.toUpperCase()}</h3>
-                <p>${safeDescription}</p>
-                <p><strong>Subjects:</strong> ${safeSubjects}</p>
-                <p><strong>Duration:</strong> ${safeDuration}</p>
-              </div>
-            `;
-            programsContainer.appendChild(programCard);
-          });
-          
-          console.log('Programs loaded from database successfully');
+      // Use local images for academic programs ONLY
+      const localPrograms = [
+        {
+          level: 'Ordinary Level',
+          description: 'Comprehensive secondary education program',
+          subjects: 'Mathematics, English, Kiswahili, Science, Social Studies',
+          duration: '4 Years',
+          image: 'STUDENT/ordinary.png'
+        },
+        {
+          level: 'Advanced Level',
+          description: 'Advanced secondary education with specialization',
+          subjects: 'PCB, PCM, CBG, HGK, EGM',
+          duration: '2 Years',
+          image: 'STUDENT/advance.png'
         }
-      } else {
-        console.log('No programs in database, keeping existing content');
-      }
+      ];
+
+      programsContainer.innerHTML = '';
+      
+      localPrograms.forEach(program => {
+        const programCard = this.createSafeElement('div', 'program-card');
+        const safeLevel = this.escapeHtml(program.level);
+        const safeDescription = this.escapeHtml(program.description);
+        const safeSubjects = this.escapeHtml(program.subjects);
+        const safeDuration = this.escapeHtml(program.duration);
+        
+        programCard.innerHTML = `
+          <div class="program-content">
+            <img src="${program.image}" alt="${safeLevel}" class="program-img" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1562813733-b31f71025d54?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60'">
+            <h3><ion-icon name="school"></ion-icon> ${safeLevel.toUpperCase()}</h3>
+            <p>${safeDescription}</p>
+            <p><strong>Subjects:</strong> ${safeSubjects}</p>
+            <p><strong>Duration:</strong> ${safeDuration}</p>
+          </div>
+        `;
+        programsContainer.appendChild(programCard);
+      });
+      
+      console.log('Programs loaded successfully with local images');
+      
     } catch (error) {
       console.error('Error loading programs:', error);
     }
   }
 
-  // Load and display testimonials
+  // Load and display testimonials - ALL FROM DATABASE
   static async loadTestimonials() {
     try {
       if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getTestimonials) {
         console.warn('DatabaseManager not available for loading testimonials');
+        this.showTestimonialsEmptyState();
         return;
       }
 
@@ -150,14 +163,14 @@ class WebsiteDataLoader {
           
           result.data.forEach((testimonial, index) => {
             const slide = this.createSafeElement('div', 'testimonial-slide');
-            const safeName = this.escapeHtml(testimonial.name || '');
-            const safeRole = this.escapeHtml(testimonial.role || '');
-            const safeText = this.escapeHtml(testimonial.testimonial_text || '');
+            const safeName = this.escapeHtml(testimonial.name || 'Anonymous');
+            const safeRole = this.escapeHtml(testimonial.role || 'Student');
+            const safeText = this.escapeHtml(testimonial.testimonial_text || 'No testimonial text available');
             const safePhotoUrl = testimonial.photo_url ? this.escapeHtml(testimonial.photo_url) : '';
             
             slide.innerHTML = `
               <div class="testimonial-content">
-                <img src="${safePhotoUrl || 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60'}" alt="${safeName}" class="testimonial-img" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60'">
+                <img src="${safePhotoUrl}" alt="${safeName}" class="testimonial-img" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60'">
                 <div class="testimonial-name">${safeName}</div>
                 <div class="testimonial-role">${safeRole}</div>
                 <p class="testimonial-text">"${safeText}"</p>
@@ -174,11 +187,38 @@ class WebsiteDataLoader {
           console.log('Testimonials loaded from database successfully');
         }
       } else {
-        console.log('No testimonials data available');
+        console.log('No testimonials data available, showing empty state');
+        this.showTestimonialsEmptyState();
       }
     } catch (error) {
       console.error('Error loading testimonials:', error);
+      this.showTestimonialsEmptyState();
     }
+  }
+
+  // Show empty state for testimonials
+  static showTestimonialsEmptyState() {
+    const testimonialsSlides = document.querySelector('.testimonial-slides');
+    const testimonialsNav = document.querySelector('.testimonial-nav');
+    
+    if (testimonialsSlides) {
+      testimonialsSlides.innerHTML = `
+        <div class="testimonial-slide">
+          <div class="testimonial-content">
+            <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&q=60" alt="Default" class="testimonial-img">
+            <div class="testimonial-name">Coming Soon</div>
+            <div class="testimonial-role">Testimonials</div>
+            <p class="testimonial-text">"Student and parent testimonials will appear here once they are added."</p>
+          </div>
+        </div>
+      `;
+    }
+    
+    if (testimonialsNav) {
+      testimonialsNav.innerHTML = '<div class="testimonial-dot active" data-slide="0"></div>';
+    }
+    
+    this.initializeTestimonialSlider();
   }
 
   // Initialize testimonial slider functionality
@@ -253,7 +293,7 @@ class WebsiteDataLoader {
     testimonialsSlides.addEventListener('mouseleave', startTestimonialAutoSlide);
   }
 
-  // Load slider images - OPTIMIZED with local fallbacks
+  // Load slider images - ALL FROM DATABASE
   static async loadSliderImages() {
     try {
       console.log('🖼️ Loading slider images from database...');
@@ -270,34 +310,13 @@ class WebsiteDataLoader {
         this.initializeImageSlider();
         console.log('✅ Slider images loaded from database successfully');
       } else {
-        console.log('🖼️ No slider images found in database, using local images');
-        this.loadLocalSliderImages();
+        console.log('🖼️ No slider images found in database, showing empty state');
+        this.setDefaultSliderContent();
       }
     } catch (error) {
       console.error('❌ Error loading slider images:', error);
-      console.log('🖼️ Loading local slider images as fallback');
-      this.loadLocalSliderImages();
+      this.setDefaultSliderContent();
     }
-  }
-  
-  // OPTIMIZED: Use local images instead of Unsplash
-  static loadLocalSliderImages() {
-    console.log('🖼️ Loading local slider images...');
-    
-    // Use more reliable image paths with fallbacks
-    const localImages = [
-      'images/slider1.jpg',
-      'images/slider2.jpg', 
-      'images/slider3.jpg',
-      'images/slider4.jpg',
-      'images/slider5.jpg'
-    ];
-    
-    // Fallback to placeholder if local images don't exist
-    window.images = localImages;
-    
-    this.initializeImageSlider();
-    console.log('✅ Local slider images loaded');
   }
   
   // Initialize image slider functionality
@@ -324,26 +343,19 @@ class WebsiteDataLoader {
       return;
     }
     
-    // Check if slider functions exist before calling
-    if (typeof window.initializeSlider === 'function') {
-      window.initializeSlider();
-    } else {
-      console.warn('initializeSlider function not found');
-    }
-    
-    if (typeof window.createDots === 'function') {
-      window.createDots();
-    }
-    
-    if (typeof window.updateSlider === 'function') {
-      window.updateSlider();
-    }
-    
-    if (typeof window.startSliderAfterLoad === 'function') {
-      window.startSliderAfterLoad();
-    } else {
-      // Start slider anyway if function doesn't exist
-      this.startBasicSlider();
+    // Use existing slider functions if available
+    try {
+      if (typeof window.initializeSlider === 'function') window.initializeSlider();
+      if (typeof window.createDots === 'function') window.createDots();
+      if (typeof window.updateSlider === 'function') window.updateSlider();
+      if (typeof window.startSliderAfterLoad === 'function') {
+        window.startSliderAfterLoad();
+      } else {
+        this.startBasicSlider();
+      }
+    } catch (error) {
+      console.error('Error using external slider functions:', error);
+      this.initializeBasicImageSlider();
     }
     
     console.log(`✅ Image slider initialized with ${window.images.length} images`);
@@ -352,23 +364,26 @@ class WebsiteDataLoader {
   // Initialize basic image slider
   static initializeBasicImageSlider() {
     const sliderContainer = document.querySelector('.slider-container') || document.querySelector('.image-slider');
-    if (!sliderContainer || !window.images || window.images.length === 0) return;
+    if (!sliderContainer || !window.images || window.images.length === 0) {
+      this.setDefaultSliderContent();
+      return;
+    }
 
     // Create basic slider structure
     sliderContainer.innerHTML = `
-      <div class="slider-wrapper" style="position: relative; width: 100%; overflow: hidden;">
+      <div class="slider-wrapper" style="position: relative; width: 100%; overflow: hidden; border-radius: 10px;">
         <div class="slides-container" style="display: flex; transition: transform 0.5s ease; width: 100%;">
           ${window.images.map((img, index) => `
             <div class="slide" style="min-width: 100%;">
-              <img src="${img}" alt="Slider Image ${index + 1}" style="width: 100%; height: 400px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1562813733-b31f71025d54?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60'">
+              <img src="${img}" alt="School Image ${index + 1}" style="width: 100%; height: 500px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1562813733-b31f71025d54?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'">
             </div>
           `).join('')}
         </div>
-        <button class="slider-prev" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px; cursor: pointer;">❮</button>
-        <button class="slider-next" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px; cursor: pointer;">❯</button>
-        <div class="slider-dots" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px;">
+        <button class="slider-prev" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 15px; cursor: pointer; border-radius: 50%; font-size: 18px;">❮</button>
+        <button class="slider-next" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 15px; cursor: pointer; border-radius: 50%; font-size: 18px;">❯</button>
+        <div class="slider-dots" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px;">
           ${window.images.map((_, index) => `
-            <span class="dot ${index === 0 ? 'active' : ''}" data-index="${index}" style="width: 10px; height: 10px; background: ${index === 0 ? '#fff' : 'rgba(255,255,255,0.5)'}; border-radius: 50%; cursor: pointer;"></span>
+            <span class="dot ${index === 0 ? 'active' : ''}" data-index="${index}" style="width: 12px; height: 12px; background: ${index === 0 ? '#fff' : 'rgba(255,255,255,0.5)'}; border-radius: 50%; cursor: pointer; transition: background 0.3s ease;"></span>
           `).join('')}
         </div>
       </div>
@@ -426,26 +441,20 @@ class WebsiteDataLoader {
     window.sliderInterval = setInterval(nextSlide, 5000);
 
     // Pause on hover
-    slidesContainer.addEventListener('mouseenter', () => {
-      if (window.sliderInterval) {
-        clearInterval(window.sliderInterval);
-      }
-    });
-
-    slidesContainer.addEventListener('mouseleave', () => {
-      window.sliderInterval = setInterval(nextSlide, 5000);
-    });
-  }
-
-  // Basic slider fallback
-  static startBasicSlider() {
-    if (!window.sliderInterval) {
-      window.sliderInterval = setInterval(() => {
-        if (typeof window.nextSlide === 'function') {
-          window.nextSlide();
+    const sliderWrapper = document.querySelector('.slider-wrapper');
+    if (sliderWrapper) {
+      sliderWrapper.addEventListener('mouseenter', () => {
+        if (window.sliderInterval) {
+          clearInterval(window.sliderInterval);
         }
-      }, 5000);
+      });
+
+      sliderWrapper.addEventListener('mouseleave', () => {
+        window.sliderInterval = setInterval(nextSlide, 5000);
+      });
     }
+
+    console.log('✅ Basic image slider initialized successfully');
   }
 
   // Set default slider content when no images
@@ -455,10 +464,11 @@ class WebsiteDataLoader {
     
     if (sliderContainer) {
       sliderContainer.innerHTML = `
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 400px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 400px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; border-radius: 10px;">
           <div style="text-align: center;">
             <ion-icon name="images-outline" style="font-size: 48px; margin-bottom: 20px;"></ion-icon>
             <p>School Images Coming Soon</p>
+            <small>Add slider images through admin panel</small>
           </div>
         </div>
       `;
@@ -534,10 +544,10 @@ class WebsiteDataLoader {
     }
   }
 
-  // Load student life content - OPTIMIZED
+  // Load student life content - NOW FROM DATABASE
   static async loadStudentLife() {
     try {
-      console.log('🎓 Loading student life images from database...');
+      console.log('🎓 Loading student life images from DATABASE...');
       
       const studentLifeGallery = document.querySelector('.student-life-gallery');
       
@@ -545,9 +555,10 @@ class WebsiteDataLoader {
         console.error('❌ Student life gallery element not found');
         return;
       }
-      
+
       // Check DatabaseManager availability
       if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getStudentLifeImages) {
+        console.warn('DatabaseManager not available for loading student life');
         this.showStudentLifeEmptyState(studentLifeGallery);
         return;
       }
@@ -559,15 +570,7 @@ class WebsiteDataLoader {
         
         studentLifeGallery.innerHTML = '';
         
-        const imagesByCategory = {};
-        imagesResult.data.forEach(image => {
-          if (!imagesByCategory[image.category]) {
-            imagesByCategory[image.category] = [];
-          }
-          imagesByCategory[image.category].push(image);
-        });
-        
-        const imagesToShow = Object.values(imagesByCategory).flat().slice(0, 6);
+        const imagesToShow = imagesResult.data.slice(0, 6);
         
         imagesToShow.forEach((image, index) => {
           const imgElement = document.createElement('img');
@@ -587,6 +590,7 @@ class WebsiteDataLoader {
           
           // Add error handling for images
           imgElement.addEventListener('error', () => {
+            console.log(`Failed to load student life image from database: ${image.image_url}`);
             imgElement.src = 'https://images.unsplash.com/photo-1562813733-b31f71025d54?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60';
           });
           
@@ -602,109 +606,18 @@ class WebsiteDataLoader {
           studentLifeGallery.appendChild(imgElement);
         });
         
-        console.log('✅ Student life images loaded from database successfully');
+        console.log('✅ Student life images loaded from DATABASE successfully');
       } else {
         console.log('📝 No student life images found in database, showing empty state');
         this.showStudentLifeEmptyState(studentLifeGallery);
       }
       
-      // Load activities if DatabaseManager available
-      if (DatabaseManager.getStudentLifeActivities) {
-        const activitiesResult = await DatabaseManager.getStudentLifeActivities();
-        
-        if (activitiesResult.success && activitiesResult.data && activitiesResult.data.length > 0) {
-          const activitiesByCategory = {};
-          activitiesResult.data.forEach(activity => {
-            if (!activitiesByCategory[activity.category]) {
-              activitiesByCategory[activity.category] = [];
-            }
-            activitiesByCategory[activity.category].push(activity.activity_name);
-          });
-          
-          Object.keys(activitiesByCategory).forEach(category => {
-            const listElement = document.querySelector(`#${category}-activities`);
-            if (listElement) {
-              listElement.innerHTML = activitiesByCategory[category]
-                .map(activity => `<li>${this.escapeHtml(activity)}</li>`)
-                .join('');
-            }
-          });
-        }
-      }
-      
     } catch (error) {
-      console.error('❌ Error loading student life:', error);
+      console.error('❌ Error loading student life from database:', error);
       const studentLifeGallery = document.querySelector('.student-life-gallery');
       if (studentLifeGallery) {
         this.showStudentLifeEmptyState(studentLifeGallery);
       }
-    }
-  }
-
-  // Load NECTA results
-  static async loadNectaResults() {
-    try {
-      console.log('📊 Loading NECTA results...');
-      
-      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getNectaResults) {
-        console.warn('DatabaseManager not available for loading NECTA results');
-        return;
-      }
-
-      const result = await DatabaseManager.getNectaResults();
-      
-      if (result.success && result.data && result.data.length > 0) {
-        console.log(`🎯 Found ${result.data.length} NECTA results`);
-        // Implement NECTA results display logic here
-        const resultsContainer = document.querySelector('.necta-results') || document.querySelector('#results-section');
-        if (resultsContainer) {
-          resultsContainer.innerHTML = result.data.map(item => `
-            <div class="result-item">
-              <h4>${this.escapeHtml(item.year || '')}</h4>
-              <p>Division: ${this.escapeHtml(item.division || '')}</p>
-              <p>School: ${this.escapeHtml(item.school_name || '')}</p>
-            </div>
-          `).join('');
-        }
-      } else {
-        console.log('No NECTA results found');
-      }
-    } catch (error) {
-      console.error('Error loading NECTA results:', error);
-    }
-  }
-
-  // Load school leadership
-  static async loadSchoolLeadership() {
-    try {
-      console.log('👥 Loading school leadership...');
-      
-      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getSchoolLeadership) {
-        console.warn('DatabaseManager not available for loading school leadership');
-        return;
-      }
-
-      const result = await DatabaseManager.getSchoolLeadership();
-      
-      if (result.success && result.data && result.data.length > 0) {
-        console.log(`🎯 Found ${result.data.length} leadership members`);
-        // Implement leadership display logic here
-        const leadershipContainer = document.querySelector('.leadership-grid') || document.querySelector('#leadership-section');
-        if (leadershipContainer) {
-          leadershipContainer.innerHTML = result.data.map(member => `
-            <div class="leader-card">
-              <img src="${member.photo_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=60'}" alt="${this.escapeHtml(member.name || '')}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=60'">
-              <h4>${this.escapeHtml(member.name || '')}</h4>
-              <p>${this.escapeHtml(member.position || '')}</p>
-              <p>${this.escapeHtml(member.qualification || '')}</p>
-            </div>
-          `).join('');
-        }
-      } else {
-        console.log('No school leadership data found');
-      }
-    } catch (error) {
-      console.error('Error loading school leadership:', error);
     }
   }
 
@@ -718,6 +631,122 @@ class WebsiteDataLoader {
         <small style="opacity: 0.7;">Check back soon for exciting glimpses of our school life!</small>
       </div>
     `;
+  }
+
+  // Load NECTA results - ALL FROM DATABASE
+  static async loadNectaResults() {
+    try {
+      console.log('📊 Loading NECTA results from database...');
+      
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getNectaResults) {
+        console.warn('DatabaseManager not available for loading NECTA results');
+        this.showNectaEmptyState();
+        return;
+      }
+
+      const result = await DatabaseManager.getNectaResults();
+      
+      if (result.success && result.data && result.data.length > 0) {
+        console.log(`🎯 Found ${result.data.length} NECTA results`);
+        
+        const resultsContainer = document.querySelector('.necta-results') || document.querySelector('#results-section');
+        if (resultsContainer) {
+          resultsContainer.innerHTML = result.data.map(item => {
+            const year = this.escapeHtml(item.year || 'N/A');
+            const division = this.escapeHtml(item.division || 'N/A');
+            const schoolName = this.escapeHtml(item.school_name || 'Hayatul Islamic School');
+            const percentage = this.escapeHtml(item.percentage || 'N/A');
+            
+            return `
+              <div class="result-item" style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px;">
+                <h4 style="color: #2c5aa0; margin-bottom: 10px;">${year} Results</h4>
+                <p><strong>Division:</strong> ${division}</p>
+                <p><strong>School:</strong> ${schoolName}</p>
+                <p><strong>Performance:</strong> ${percentage}%</p>
+              </div>
+            `;
+          }).join('');
+        }
+      } else {
+        console.log('No NECTA results found, showing empty state');
+        this.showNectaEmptyState();
+      }
+    } catch (error) {
+      console.error('Error loading NECTA results:', error);
+      this.showNectaEmptyState();
+    }
+  }
+
+  // Show empty state for NECTA results
+  static showNectaEmptyState() {
+    const resultsContainer = document.querySelector('.necta-results') || document.querySelector('#results-section');
+    if (resultsContainer) {
+      resultsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px;">
+          <ion-icon name="trophy-outline" style="font-size: 48px; color: #6c757d; margin-bottom: 15px;"></ion-icon>
+          <h4 style="color: #6c757d;">NECTA Results Coming Soon</h4>
+          <p>National examination results will be displayed here once available.</p>
+        </div>
+      `;
+    }
+  }
+
+  // Load school leadership - ALL FROM DATABASE (INCLUDING IMAGES)
+  static async loadSchoolLeadership() {
+    try {
+      console.log('👥 Loading school leadership from database...');
+      
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getSchoolLeadership) {
+        console.warn('DatabaseManager not available for loading school leadership');
+        this.showLeadershipEmptyState();
+        return;
+      }
+
+      const result = await DatabaseManager.getSchoolLeadership();
+      
+      if (result.success && result.data && result.data.length > 0) {
+        console.log(`🎯 Found ${result.data.length} leadership members`);
+        
+        const leadershipContainer = document.querySelector('.leadership-grid') || document.querySelector('#leadership-section');
+        if (leadershipContainer) {
+          leadershipContainer.innerHTML = result.data.map(member => {
+            const name = this.escapeHtml(member.name || 'Staff Member');
+            const position = this.escapeHtml(member.position || 'Position');
+            const qualification = this.escapeHtml(member.qualification || '');
+            const photoUrl = member.photo_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=60';
+            
+            return `
+              <div class="leader-card" style="background: white; border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <img src="${photoUrl}" alt="${name}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 15px;" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=60'">
+                <h4 style="color: #2c5aa0; margin-bottom: 5px;">${name}</h4>
+                <p style="color: #666; font-weight: bold; margin-bottom: 5px;">${position}</p>
+                ${qualification ? `<p style="color: #888; font-size: 0.9em;">${qualification}</p>` : ''}
+              </div>
+            `;
+          }).join('');
+        }
+      } else {
+        console.log('No school leadership data found, showing empty state');
+        this.showLeadershipEmptyState();
+      }
+    } catch (error) {
+      console.error('Error loading school leadership:', error);
+      this.showLeadershipEmptyState();
+    }
+  }
+
+  // Show empty state for leadership
+  static showLeadershipEmptyState() {
+    const leadershipContainer = document.querySelector('.leadership-grid') || document.querySelector('#leadership-section');
+    if (leadershipContainer) {
+      leadershipContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px; grid-column: 1 / -1;">
+          <ion-icon name="people-outline" style="font-size: 48px; color: #6c757d; margin-bottom: 15px;"></ion-icon>
+          <h4 style="color: #6c757d;">School Leadership</h4>
+          <p>Leadership information will be displayed here once available.</p>
+        </div>
+      `;
+    }
   }
 
   // Clear all intervals
@@ -742,90 +771,22 @@ class WebsiteDataLoader {
     this.clearIntervals();
     
     try {
-      // Load all data once
+      // Load all data once with proper error handling
       await Promise.allSettled([
-        this.loadNews(),
-        this.loadPrograms(),
-        this.loadTestimonials(),
-        this.loadStudentLife(),
-        this.loadSliderImages(),
-        this.loadWebsiteSettings(),
-        this.loadNectaResults(),
-        this.loadSchoolLeadership()
+        this.loadNews(),                    // FROM DATABASE
+        this.loadPrograms(),               // LOCAL IMAGES ONLY (Academic programs)
+        this.loadTestimonials(),           // FROM DATABASE
+        this.loadStudentLife(),            // FROM DATABASE
+        this.loadSliderImages(),           // FROM DATABASE
+        this.loadWebsiteSettings(),        // FROM DATABASE
+        this.loadNectaResults(),           // FROM DATABASE
+        this.loadSchoolLeadership()        // FROM DATABASE
       ]);
       
-      // OPTIMIZED: Different refresh rates for admin vs public
-      const isAdminPage = window.location.pathname.includes('admin') || 
-                         window.location.pathname.includes('login') ||
-                         window.location.pathname.includes('dashboard');
+      console.log('✅ All website data initialized successfully');
       
-      if (isAdminPage) {
-        console.log('Admin page detected - using frequent updates');
-        // Admin pages: frequent updates
-        const adminInterval = setInterval(() => {
-          this.loadNews();
-          this.loadPrograms();
-          this.loadTestimonials();
-          this.loadStudentLife();
-          this.loadSliderImages();
-          this.loadWebsiteSettings();
-        }, 2 * 60 * 1000); // Every 2 minutes for admin
-        this.intervals.push(adminInterval);
-      } else {
-        console.log('Public page detected - using optimized updates');
-        // Public pages: less frequent updates
-        const newsInterval = setInterval(() => {
-          this.loadNews(); // Only news updates frequently
-        }, 10 * 60 * 1000); // Every 10 minutes for public
-        this.intervals.push(newsInterval);
-        
-        // Other content updates less frequently
-        const otherContentInterval = setInterval(() => {
-          this.loadPrograms();
-          this.loadTestimonials();
-          this.loadWebsiteSettings();
-        }, 30 * 60 * 1000); // Every 30 minutes
-        this.intervals.push(otherContentInterval);
-      }
     } catch (error) {
       console.error('Error during website data initialization:', error);
-    }
-  }
-
-  // OPTIMIZED: Minimal real-time updates for public
-  static setupRealTimeUpdates() {
-    try {
-      if (typeof DatabaseManager === 'undefined') {
-        console.log('DatabaseManager not available for real-time updates');
-        return;
-      }
-
-      const isAdminPage = window.location.pathname.includes('admin') || 
-                         window.location.pathname.includes('login') ||
-                         window.location.pathname.includes('dashboard');
-      
-      if (isAdminPage) {
-        // Full real-time for admin
-        if (DatabaseManager.subscribeToNews) {
-          DatabaseManager.subscribeToNews((payload) => {
-            console.log('News updated, reloading...');
-            this.loadNews();
-          });
-        }
-
-        if (DatabaseManager.subscribeToApplications) {
-          DatabaseManager.subscribeToApplications((payload) => {
-            console.log('Applications updated');
-          });
-        }
-        
-        console.log('Admin real-time updates enabled');
-      } else {
-        // Minimal real-time for public
-        console.log('Public page - minimal real-time updates');
-      }
-    } catch (error) {
-      console.log('Real-time subscriptions not available, using periodic updates');
     }
   }
 }
@@ -859,14 +820,13 @@ document.addEventListener('DOMContentLoaded', function() {
   // Reduced timeout for faster loading
   const initTimeout = setTimeout(() => {
     if (window.DatabaseManager && typeof DatabaseManager.getNews === 'function') {
-      console.log('DatabaseManager found, loading dynamic content...');
+      console.log('DatabaseManager found, loading ALL content from DATABASE...');
       WebsiteDataLoader.initializeWebsiteData();
-      WebsiteDataLoader.setupRealTimeUpdates();
     } else {
-      console.log('DatabaseManager not available, using static content');
+      console.log('DatabaseManager not available, using limited content');
       // Initialize basic functionality even without DatabaseManager
-      WebsiteDataLoader.loadLocalSliderImages();
-      WebsiteDataLoader.loadStudentLife();
+      WebsiteDataLoader.loadPrograms(); // Local academic programs only
+      WebsiteDataLoader.setDefaultSliderContent(); // Default slider
     }
   }, 1000);
 
