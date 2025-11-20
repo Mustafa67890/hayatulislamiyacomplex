@@ -8,6 +8,7 @@ class WebsiteDataLoader {
   
   // Safe HTML escape function
   static escapeHtml(unsafe) {
+    if (!unsafe) return '';
     return unsafe
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -20,7 +21,7 @@ class WebsiteDataLoader {
   static createSafeElement(tag, className, html) {
     const element = document.createElement(tag);
     if (className) element.className = className;
-    if (html) element.innerHTML = html; // Only use for trusted HTML structures
+    if (html) element.innerHTML = html;
     return element;
   }
 
@@ -35,7 +36,7 @@ class WebsiteDataLoader {
 
       const result = await DatabaseManager.getNews(3);
       
-      if (result.success && result.data.length > 0) {
+      if (result.success && result.data && result.data.length > 0) {
         const newsContainer = document.querySelector('.news-grid');
         
         if (newsContainer) {
@@ -45,13 +46,13 @@ class WebsiteDataLoader {
             const newsCard = document.createElement('div');
             newsCard.className = 'news-card';
             
-            const shortContent = news.content.substring(0, 150);
-            const isLong = news.content.length > 150;
-            const safeTitle = this.escapeHtml(news.title);
-            const safeContent = this.escapeHtml(news.content);
+            const shortContent = news.content ? news.content.substring(0, 150) : '';
+            const isLong = news.content && news.content.length > 150;
+            const safeTitle = this.escapeHtml(news.title || 'No Title');
+            const safeContent = this.escapeHtml(news.content || '');
             const safeShortContent = this.escapeHtml(shortContent);
             const safeImageUrl = news.featured_image_url ? this.escapeHtml(news.featured_image_url) : '';
-            const date = new Date(news.date || news.created_at);
+            const date = new Date(news.date || news.created_at || Date.now());
             const formattedDate = date instanceof Date && !isNaN(date) ? date.toLocaleDateString() : 'Date not available';
             
             // Use template literals but with escaped content
@@ -76,6 +77,8 @@ class WebsiteDataLoader {
           
           console.log('News loaded from database successfully');
         }
+      } else {
+        console.log('No news data available');
       }
     } catch (error) {
       console.error('Error loading news:', error);
@@ -83,7 +86,49 @@ class WebsiteDataLoader {
   }
 
   // Load and display programs
-  
+  static async loadPrograms() {
+    try {
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getPrograms) {
+        console.warn('DatabaseManager not available for loading programs');
+        return;
+      }
+
+      const result = await DatabaseManager.getPrograms();
+      
+      if (result.success && result.data && result.data.length > 0) {
+        const programsContainer = document.querySelector('.programs-grid') || document.querySelector('#programs-section');
+        
+        if (programsContainer) {
+          programsContainer.innerHTML = '';
+          
+          result.data.forEach(program => {
+            const programCard = this.createSafeElement('div', 'program-card');
+            const safeLevel = this.escapeHtml(program.level || '');
+            const safeDescription = this.escapeHtml(program.description || '');
+            const safeSubjects = this.escapeHtml(program.subjects || '');
+            const safeDuration = this.escapeHtml(program.duration || 'N/A');
+            
+            programCard.innerHTML = `
+              <div class="program-content">
+                <h3><ion-icon name="school"></ion-icon> ${safeLevel.toUpperCase()}</h3>
+                <p>${safeDescription}</p>
+                <p><strong>Subjects:</strong> ${safeSubjects}</p>
+                <p><strong>Duration:</strong> ${safeDuration}</p>
+              </div>
+            `;
+            programsContainer.appendChild(programCard);
+          });
+          
+          console.log('Programs loaded from database successfully');
+        }
+      } else {
+        console.log('No programs in database, keeping existing content');
+      }
+    } catch (error) {
+      console.error('Error loading programs:', error);
+    }
+  }
+
   // Load and display testimonials
   static async loadTestimonials() {
     try {
@@ -94,7 +139,7 @@ class WebsiteDataLoader {
 
       const result = await DatabaseManager.getTestimonials();
       
-      if (result.success && result.data.length > 0) {
+      if (result.success && result.data && result.data.length > 0) {
         const testimonialsSlides = document.querySelector('.testimonial-slides');
         const testimonialsNav = document.querySelector('.testimonial-nav');
         
@@ -105,9 +150,9 @@ class WebsiteDataLoader {
           
           result.data.forEach((testimonial, index) => {
             const slide = this.createSafeElement('div', 'testimonial-slide');
-            const safeName = this.escapeHtml(testimonial.name);
-            const safeRole = this.escapeHtml(testimonial.role);
-            const safeText = this.escapeHtml(testimonial.testimonial_text);
+            const safeName = this.escapeHtml(testimonial.name || '');
+            const safeRole = this.escapeHtml(testimonial.role || '');
+            const safeText = this.escapeHtml(testimonial.testimonial_text || '');
             const safePhotoUrl = testimonial.photo_url ? this.escapeHtml(testimonial.photo_url) : '';
             
             slide.innerHTML = `
@@ -128,6 +173,8 @@ class WebsiteDataLoader {
           this.initializeTestimonialSlider();
           console.log('Testimonials loaded from database successfully');
         }
+      } else {
+        console.log('No testimonials data available');
       }
     } catch (error) {
       console.error('Error loading testimonials:', error);
@@ -139,7 +186,10 @@ class WebsiteDataLoader {
     const testimonialsSlides = document.querySelector('.testimonial-slides');
     const testimonialsNav = document.querySelector('.testimonial-nav');
     
-    if (!testimonialsSlides || !testimonialsNav) return;
+    if (!testimonialsSlides || !testimonialsNav) {
+      console.log('Testimonial slider elements not found');
+      return;
+    }
     
     // Clear any existing interval
     if (this.testimonialInterval) {
@@ -149,7 +199,10 @@ class WebsiteDataLoader {
     let currentTestimonial = 0;
     const totalTestimonials = testimonialsSlides.children.length;
     
-    if (totalTestimonials === 0) return;
+    if (totalTestimonials === 0) {
+      console.log('No testimonial slides to initialize');
+      return;
+    }
     
     const updateTestimonialDots = () => {
       document.querySelectorAll('.testimonial-dot').forEach((dot, index) => {
@@ -173,7 +226,9 @@ class WebsiteDataLoader {
     };
     
     const stopTestimonialAutoSlide = () => {
-      clearInterval(this.testimonialInterval);
+      if (this.testimonialInterval) {
+        clearInterval(this.testimonialInterval);
+      }
     };
     
     // Initialize first slide
@@ -182,7 +237,9 @@ class WebsiteDataLoader {
     
     // Remove existing event listeners by cloning
     const newNav = testimonialsNav.cloneNode(true);
-    testimonialsNav.parentNode.replaceChild(newNav, testimonialsNav);
+    if (testimonialsNav.parentNode) {
+      testimonialsNav.parentNode.replaceChild(newNav, testimonialsNav);
+    }
     
     newNav.addEventListener('click', (e) => {
       if (e.target.classList.contains('testimonial-dot')) {
@@ -227,7 +284,7 @@ class WebsiteDataLoader {
   static loadLocalSliderImages() {
     console.log('🖼️ Loading local slider images...');
     
-    // Use more reliable image paths
+    // Use more reliable image paths with fallbacks
     const localImages = [
       'images/slider1.jpg',
       'images/slider2.jpg', 
@@ -250,6 +307,20 @@ class WebsiteDataLoader {
     if (!window.images || window.images.length === 0) {
       console.log('⚠️ No images available for slider');
       this.setDefaultSliderContent();
+      return;
+    }
+    
+    // Check if slider container exists
+    const sliderContainer = document.querySelector('.slider-container') || document.querySelector('.image-slider');
+    if (!sliderContainer) {
+      console.log('Slider container not found');
+      return;
+    }
+    
+    // Initialize basic slider if no external functions exist
+    if (typeof window.initializeSlider !== 'function') {
+      console.log('Initializing basic image slider');
+      this.initializeBasicImageSlider();
       return;
     }
     
@@ -276,6 +347,94 @@ class WebsiteDataLoader {
     }
     
     console.log(`✅ Image slider initialized with ${window.images.length} images`);
+  }
+
+  // Initialize basic image slider
+  static initializeBasicImageSlider() {
+    const sliderContainer = document.querySelector('.slider-container') || document.querySelector('.image-slider');
+    if (!sliderContainer || !window.images || window.images.length === 0) return;
+
+    // Create basic slider structure
+    sliderContainer.innerHTML = `
+      <div class="slider-wrapper" style="position: relative; width: 100%; overflow: hidden;">
+        <div class="slides-container" style="display: flex; transition: transform 0.5s ease; width: 100%;">
+          ${window.images.map((img, index) => `
+            <div class="slide" style="min-width: 100%;">
+              <img src="${img}" alt="Slider Image ${index + 1}" style="width: 100%; height: 400px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1562813733-b31f71025d54?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60'">
+            </div>
+          `).join('')}
+        </div>
+        <button class="slider-prev" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px; cursor: pointer;">❮</button>
+        <button class="slider-next" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px; cursor: pointer;">❯</button>
+        <div class="slider-dots" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px;">
+          ${window.images.map((_, index) => `
+            <span class="dot ${index === 0 ? 'active' : ''}" data-index="${index}" style="width: 10px; height: 10px; background: ${index === 0 ? '#fff' : 'rgba(255,255,255,0.5)'}; border-radius: 50%; cursor: pointer;"></span>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    // Add slider functionality
+    this.setupBasicSliderFunctionality();
+  }
+
+  // Setup basic slider functionality
+  static setupBasicSliderFunctionality() {
+    const slidesContainer = document.querySelector('.slides-container');
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+    const prevBtn = document.querySelector('.slider-prev');
+    const nextBtn = document.querySelector('.slider-next');
+    
+    if (!slidesContainer || slides.length === 0) return;
+
+    let currentSlide = 0;
+    const totalSlides = slides.length;
+
+    const updateSlider = () => {
+      slidesContainer.style.transform = `translateX(-${currentSlide * 100}%)`;
+      dots.forEach((dot, index) => {
+        dot.style.background = index === currentSlide ? '#fff' : 'rgba(255,255,255,0.5)';
+      });
+    };
+
+    const nextSlide = () => {
+      currentSlide = (currentSlide + 1) % totalSlides;
+      updateSlider();
+    };
+
+    const prevSlide = () => {
+      currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+      updateSlider();
+    };
+
+    // Event listeners
+    if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+    if (prevBtn) prevBtn.addEventListener('click', prevSlide);
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        currentSlide = parseInt(dot.dataset.index);
+        updateSlider();
+      });
+    });
+
+    // Auto-slide
+    if (window.sliderInterval) {
+      clearInterval(window.sliderInterval);
+    }
+    window.sliderInterval = setInterval(nextSlide, 5000);
+
+    // Pause on hover
+    slidesContainer.addEventListener('mouseenter', () => {
+      if (window.sliderInterval) {
+        clearInterval(window.sliderInterval);
+      }
+    });
+
+    slidesContainer.addEventListener('mouseleave', () => {
+      window.sliderInterval = setInterval(nextSlide, 5000);
+    });
   }
 
   // Basic slider fallback
@@ -413,9 +572,9 @@ class WebsiteDataLoader {
         imagesToShow.forEach((image, index) => {
           const imgElement = document.createElement('img');
           imgElement.src = image.image_url;
-          imgElement.alt = this.escapeHtml(image.title);
+          imgElement.alt = this.escapeHtml(image.title || 'Student Life');
           imgElement.className = 'student-life-img';
-          imgElement.title = this.escapeHtml(image.description || image.title);
+          imgElement.title = this.escapeHtml(image.description || image.title || 'Student Life');
           imgElement.loading = 'lazy';
           imgElement.style.cssText = `
             width: 100%;
@@ -453,7 +612,7 @@ class WebsiteDataLoader {
       if (DatabaseManager.getStudentLifeActivities) {
         const activitiesResult = await DatabaseManager.getStudentLifeActivities();
         
-        if (activitiesResult.success && activitiesResult.data.length > 0) {
+        if (activitiesResult.success && activitiesResult.data && activitiesResult.data.length > 0) {
           const activitiesByCategory = {};
           activitiesResult.data.forEach(activity => {
             if (!activitiesByCategory[activity.category]) {
@@ -479,6 +638,73 @@ class WebsiteDataLoader {
       if (studentLifeGallery) {
         this.showStudentLifeEmptyState(studentLifeGallery);
       }
+    }
+  }
+
+  // Load NECTA results
+  static async loadNectaResults() {
+    try {
+      console.log('📊 Loading NECTA results...');
+      
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getNectaResults) {
+        console.warn('DatabaseManager not available for loading NECTA results');
+        return;
+      }
+
+      const result = await DatabaseManager.getNectaResults();
+      
+      if (result.success && result.data && result.data.length > 0) {
+        console.log(`🎯 Found ${result.data.length} NECTA results`);
+        // Implement NECTA results display logic here
+        const resultsContainer = document.querySelector('.necta-results') || document.querySelector('#results-section');
+        if (resultsContainer) {
+          resultsContainer.innerHTML = result.data.map(item => `
+            <div class="result-item">
+              <h4>${this.escapeHtml(item.year || '')}</h4>
+              <p>Division: ${this.escapeHtml(item.division || '')}</p>
+              <p>School: ${this.escapeHtml(item.school_name || '')}</p>
+            </div>
+          `).join('');
+        }
+      } else {
+        console.log('No NECTA results found');
+      }
+    } catch (error) {
+      console.error('Error loading NECTA results:', error);
+    }
+  }
+
+  // Load school leadership
+  static async loadSchoolLeadership() {
+    try {
+      console.log('👥 Loading school leadership...');
+      
+      if (typeof DatabaseManager === 'undefined' || !DatabaseManager.getSchoolLeadership) {
+        console.warn('DatabaseManager not available for loading school leadership');
+        return;
+      }
+
+      const result = await DatabaseManager.getSchoolLeadership();
+      
+      if (result.success && result.data && result.data.length > 0) {
+        console.log(`🎯 Found ${result.data.length} leadership members`);
+        // Implement leadership display logic here
+        const leadershipContainer = document.querySelector('.leadership-grid') || document.querySelector('#leadership-section');
+        if (leadershipContainer) {
+          leadershipContainer.innerHTML = result.data.map(member => `
+            <div class="leader-card">
+              <img src="${member.photo_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=60'}" alt="${this.escapeHtml(member.name || '')}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=60'">
+              <h4>${this.escapeHtml(member.name || '')}</h4>
+              <p>${this.escapeHtml(member.position || '')}</p>
+              <p>${this.escapeHtml(member.qualification || '')}</p>
+            </div>
+          `).join('');
+        }
+      } else {
+        console.log('No school leadership data found');
+      }
+    } catch (error) {
+      console.error('Error loading school leadership:', error);
     }
   }
 
@@ -523,7 +749,9 @@ class WebsiteDataLoader {
         this.loadTestimonials(),
         this.loadStudentLife(),
         this.loadSliderImages(),
-        this.loadWebsiteSettings()
+        this.loadWebsiteSettings(),
+        this.loadNectaResults(),
+        this.loadSchoolLeadership()
       ]);
       
       // OPTIMIZED: Different refresh rates for admin vs public
@@ -638,6 +866,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('DatabaseManager not available, using static content');
       // Initialize basic functionality even without DatabaseManager
       WebsiteDataLoader.loadLocalSliderImages();
+      WebsiteDataLoader.loadStudentLife();
     }
   }, 1000);
 
